@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bastu Status</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>🧖‍♂️ Bastu – Status & Temperatur</h1>
+      <div id="service-indicator" class="pill">Init...</div>
+    </header>
+
+    <main>
+      <section class="grid">
+        <div class="card">
+          <h2>Hälsa</h2>
+          <div class="kv"><span>Nu:</span><span id="now">–</span></div>
+          <div class="kv"><span>Uptime:</span><span id="uptime">–</span></div>
+          <div class="kv"><span>Senaste tick:</span><span id="lastTick">–</span></div>
+          <div class="kv"><span>Senaste körning:</span><span id="lastPublishBatchAt">–</span></div>
+          <div class="kv"><span>Antal i senaste körning:</span><span id="lastPublishCount">–</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Schema</h2>
+          <div class="kv"><span>Aktiv tid:</span><span id="activeWindow">–</span></div>
+          <div class="kv"><span>Intervall:</span><span id="everyMinutes">–</span></div>
+          <div class="kv"><span>Just nu i fönster:</span><span id="inActiveWindow">–</span></div>
+          <div class="kv"><span>Ska skicka nu:</span><span id="shouldSendNow">–</span></div>
+        </div>
+
+        <div class="card">
+          <h2>Sensorer</h2>
+          <div id="sensorsList" class="list">–</div>
+        </div>
+
+        <div class="card wide">
+          <h2>Senaste publiceringar</h2>
+          <table id="logTable">
+            <thead>
+              <tr>
+                <th>Tid</th>
+                <th>Typ</th>
+                <th>Sensor</th>
+                <th>Temp (°C)</th>
+                <th>Status</th>
+                <th>Info</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Uppdaterar var 10:e sekund</span>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+  </html>
+

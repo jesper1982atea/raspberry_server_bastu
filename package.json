@@ -1,0 +1,20 @@
+{
+  "name": "raspberry_server_bastu",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Raspberry Pi server som läser temperatur och skickar data enligt schema.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "glob": "^10.4.5"
+  }
+}
+

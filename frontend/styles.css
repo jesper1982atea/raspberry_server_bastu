@@ -1,0 +1,64 @@
+:root {
+  --bg: #0f1115;
+  --card: #151924;
+  --text: #e6e6e6;
+  --muted: #a0a6b3;
+  --ok: #22c55e;
+  --fail: #ef4444;
+  --accent: #60a5fa;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; padding: 0 16px 24px;
+  background: var(--bg); color: var(--text);
+  font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell;
+}
+
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0; gap: 12px;
+}
+h1 { font-size: 20px; margin: 0; }
+
+.pill {
+  padding: 6px 10px; border-radius: 999px; font-weight: 600;
+  background: #2d3445; color: #fff; min-width: 80px; text-align: center;
+}
+.pill.up { background: rgba(34,197,94,.2); color: var(--ok); border: 1px solid var(--ok); }
+.pill.down { background: rgba(239,68,68,.2); color: var(--fail); border: 1px solid var(--fail); }
+
+main { max-width: 1100px; margin: 0 auto; }
+.grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+.card { grid-column: span 4; background: var(--card); border: 1px solid #232a3b; border-radius: 12px; padding: 12px; }
+.card.wide { grid-column: 1 / -1; }
+
+h2 { margin: 4px 0 12px; font-size: 16px; color: var(--accent); }
+.kv { display: flex; justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px dashed #2a3145; }
+.kv:last-child { border-bottom: 0; }
+.kv span:first-child { color: var(--muted); }
+
+.list { display: flex; flex-direction: column; gap: 8px; }
+.list-item { display: flex; justify-content: space-between; border: 1px solid #2a3145; background: #10141e; border-radius: 8px; padding: 8px 10px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { border-bottom: 1px solid #232a3b; padding: 8px; text-align: left; }
+thead th { color: var(--muted); font-weight: 600; }
+tbody tr:hover { background: #10141e; }
+
+.badge {
+  display: inline-block; padding: 2px 6px; border-radius: 6px; font-weight: 700; font-size: 12px;
+}
+.badge.ok { background: rgba(34,197,94,.15); color: var(--ok); border: 1px solid var(--ok); }
+.badge.fail { background: rgba(239,68,68,.15); color: var(--fail); border: 1px solid var(--fail); }
+
+footer { max-width: 1100px; margin: 16px auto 0; color: var(--muted); }
+
+@media (max-width: 960px) {
+  .card { grid-column: span 6; }
+}
+@media (max-width: 640px) {
+  .card { grid-column: 1 / -1; }
+}
+

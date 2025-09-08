@@ -1,0 +1,19 @@
+[Unit]
+Description=Raspberry Bastu Server
+After=network.target
+
+[Service]
+Type=simple
+# Uppdatera till den användare som ska köra tjänsten
+User=pi
+WorkingDirectory=/home/pi/raspberry_server_bastu
+EnvironmentFile=/etc/raspberry-bastu.env
+ExecStart=/usr/bin/env node server.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
