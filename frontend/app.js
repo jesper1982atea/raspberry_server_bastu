@@ -23,9 +23,10 @@ function formatUptime(sec) {
 
 async function updateHealth() {
   try {
-    const [status, temps] = await Promise.all([
+    const [status, temps, debug] = await Promise.all([
       fetchJson('/api/runtime-status'),
       fetchJson('/api/temperatures'),
+      fetchJson('/api/debug'),
     ]);
 
     // Indicator
@@ -58,6 +59,12 @@ async function updateHealth() {
       div.innerHTML = `<span>${name}</span><span>${val} °C</span>`;
       list.appendChild(div);
     });
+
+    // Debug toggle
+    const btn = El('#debugToggle');
+    const on = !!debug.enabled;
+    btn.textContent = `Debug: ${on ? 'ON' : 'OFF'}`;
+    btn.classList.toggle('on', on);
   } catch (e) {
     const pill = El('#service-indicator');
     pill.textContent = 'NERE';
@@ -96,3 +103,21 @@ function tick() {
 tick();
 setInterval(tick, 10000);
 
+// Toggle handler
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = El('#debugToggle');
+  btn.addEventListener('click', async () => {
+    try {
+      const cur = await fetchJson('/api/debug');
+      const next = !cur.enabled;
+      await fetch('/api/debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: next })
+      });
+      tick();
+    } catch (e) {
+      alert('Kunde inte toggla debug: ' + e.message);
+    }
+  });
+});

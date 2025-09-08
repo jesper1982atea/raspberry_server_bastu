@@ -8,6 +8,7 @@ const axios = require('axios');
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
+app.use(express.json());
 
 // Helper: env boolean parser
 const envBool = (name, def = false) => {
@@ -25,10 +26,33 @@ let lastSchedulerTickTime = null; // ISO string
 let lastPublishBatchAt = null; // ISO string
 let lastPublishCount = 0;
 let lastSensors = [];
+let debugMode = envBool('DEBUG_MODE', false);
+const debugSensorList = (process.env.DEBUG_SENSORS || '28-TEST1,28-TEST2,cpu')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const simTemps = Object.create(null); // sensor -> tempC
 
 function addLog(entry) {
   publishLog.push({ ...entry, time: new Date().toISOString() });
   if (publishLog.length > MAX_LOG) publishLog.splice(0, publishLog.length - MAX_LOG);
+}
+
+function simulateTemp(sensor) {
+  // init defaults per sensor
+  if (!(sensor in simTemps)) {
+    const base = sensor === 'cpu' ? 45 : 20 + Math.random() * 10;
+    simTemps[sensor] = base;
+  }
+  // add small jitter
+  const jitter = (Math.random() - 0.5) * 0.6; // +/-0.3C
+  let next = simTemps[sensor] + jitter;
+  // clamp to sane range
+  const min = sensor === 'cpu' ? 35 : 5;
+  const max = sensor === 'cpu' ? 75 : 90;
+  next = Math.max(min, Math.min(max, next));
+  simTemps[sensor] = next;
+  return next;
 }
 
 // Basdir för 1-wire sensorer (DS18B20)
@@ -159,21 +183,32 @@ app.get('/api/temperature/:id', async (req, res) => {
 
 // API-endpoint för att hämta temperaturer och sensornamn
 app.get('/api/temperatures', (req, res) => {
-  const deviceFolders = getDeviceFolders();
-  const temperatures = deviceFolders.map((folder) => {
-    const deviceFile = path.join(folder, 'w1_slave');
-    const sensorName = path.basename(folder);
-    const tempC = readTemp(deviceFile);
-    return {
-      sensor: sensorName,
-      temperature: tempC !== null ? Number(tempC.toFixed(2)) : null,
+  let temperatures = [];
+  if (debugMode) {
+    temperatures = debugSensorList.map((sensor) => ({
+      sensor,
+      temperature: Number(simulateTemp(sensor).toFixed(2)),
       unit: 'C',
-    };
-  });
-  // Lägg till CPU-temp som "cpu" om tillgänglig
-  const cpu = readCpuTempC();
-  if (cpu !== null) {
-    temperatures.push({ sensor: 'cpu', temperature: Number(cpu.toFixed(2)), unit: 'C' });
+      debug: true,
+    }));
+  } else {
+    const deviceFolders = getDeviceFolders();
+    temperatures = deviceFolders.map((folder) => {
+      const deviceFile = path.join(folder, 'w1_slave');
+      const sensorName = path.basename(folder);
+      const tempC = readTemp(deviceFile);
+      return {
+        sensor: sensorName,
+        temperature: tempC !== null ? Number(tempC.toFixed(2)) : null,
+        unit: 'C',
+        debug: false,
+      };
+    });
+    // Lägg till CPU-temp som "cpu" om tillgänglig
+    const cpu = readCpuTempC();
+    if (cpu !== null) {
+      temperatures.push({ sensor: 'cpu', temperature: Number(cpu.toFixed(2)), unit: 'C', debug: false });
+    }
   }
   res.json(temperatures);
 });
@@ -329,8 +364,8 @@ const PUBLISH_ENABLED = envBool('PUBLISH_ENABLED', true);
 const UPDATE_BOOKINGS_ENABLED = envBool('UPDATE_BOOKINGS_ENABLED', true);
 
 async function scheduleTemperatureSending() {
-  const deviceFolders = getDeviceFolders();
-  lastSensors = deviceFolders.map((f) => path.basename(f));
+  const deviceFolders = debugMode ? [] : getDeviceFolders();
+  lastSensors = debugMode ? debugSensorList.slice() : deviceFolders.map((f) => path.basename(f));
   const now = new Date();
   const hour = now.getHours();
   const minute = now.getMinutes();
@@ -344,21 +379,30 @@ async function scheduleTemperatureSending() {
   // Läs alla sensorer
   lastPublishBatchAt = now.toISOString();
   let count = 0;
-  deviceFolders.forEach((folder) => {
-    const deviceFile = path.join(folder, 'w1_slave');
-    const sensorName = path.basename(folder);
-    const tempC = readTemp(deviceFile);
-    if (tempC !== null && PUBLISH_ENABLED) {
-      sendTemperatureData(sensorName, tempC);
+  if (debugMode) {
+    lastSensors.forEach((sensorName) => {
+      const tempC = simulateTemp(sensorName);
+      if (PUBLISH_ENABLED) {
+        sendTemperatureData(sensorName, tempC);
+        count++;
+      }
+    });
+  } else {
+    deviceFolders.forEach((folder) => {
+      const deviceFile = path.join(folder, 'w1_slave');
+      const sensorName = path.basename(folder);
+      const tempC = readTemp(deviceFile);
+      if (tempC !== null && PUBLISH_ENABLED) {
+        sendTemperatureData(sensorName, tempC);
+        count++;
+      }
+    });
+    // CPU-temp som extra datapunkt
+    const cpu = readCpuTempC();
+    if (cpu !== null && PUBLISH_ENABLED) {
+      sendTemperatureData('cpu', cpu);
       count++;
     }
-  });
-
-  // CPU-temp som extra datapunkt
-  const cpu = readCpuTempC();
-  if (cpu !== null && PUBLISH_ENABLED) {
-    sendTemperatureData('cpu', cpu);
-    count++;
   }
 
   lastPublishCount = count;
@@ -431,7 +475,7 @@ app.get('/api/runtime-status', (req, res) => {
     },
     sensors: {
       discovered: lastSensors,
-      cpuTempC: readCpuTempC(),
+      cpuTempC: debugMode ? simulateTemp('cpu') : readCpuTempC(),
     },
     flags: {
       PUBLISH_ENABLED,
@@ -439,8 +483,23 @@ app.get('/api/runtime-status', (req, res) => {
       ENABLE_BATTERY_ROUTES,
       ENABLE_VOLTAGE_ROUTE,
       ENABLE_HUAWEI_ROUTES,
+      DEBUG_MODE: debugMode,
     },
+    debug: debugMode ? { sensors: debugSensorList } : null,
   });
+});
+
+// Debug mode endpoints
+app.get('/api/debug', (req, res) => {
+  res.json({ enabled: debugMode, sensors: debugSensorList });
+});
+
+app.post('/api/debug', (req, res) => {
+  const { enabled } = req.body || {};
+  if (typeof enabled !== 'boolean') return res.status(400).json({ error: 'enabled must be boolean' });
+  debugMode = enabled;
+  addLog({ type: 'debug', sensor: '-', tempC: null, ok: true, info: `debugMode=${enabled}` });
+  res.json({ enabled: debugMode });
 });
 
 // Hälsa

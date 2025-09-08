@@ -43,6 +43,8 @@ Se `.env.example` för alla alternativ. Viktiga:
 - UPDATE_BOOKINGS_ENABLED, UPDATE_BOOKINGS_URL: hämtning/uppdatering av bokningar
 - SCHEDULE_ACTIVE_START_HOUR, SCHEDULE_ACTIVE_END_HOUR, SCHEDULE_EVERY_MINUTES: schema
 - ENABLE_*: aktivera valfria rutter (batteri, voltage, huawei)
+- DEBUG_MODE: starta i debug‑läge (simulerade sensorer)
+- DEBUG_SENSORS: kommaseparerad lista (t.ex. 28-TEST1,28-TEST2,cpu)
 
 Köra lokalt
 -----------
@@ -64,6 +66,8 @@ API‑endpoints
 - Frontend-backend:
   - GET /api/runtime-status: körstatus, schema, sensorer
   - GET /api/publish-log: senaste publiceringar (limit=)
+  - GET /api/debug: hämta debug‑läge och sensorer
+  - POST /api/debug { enabled: boolean }: sätt debug‑läge
 
 Hur sändning fungerar
 ---------------------

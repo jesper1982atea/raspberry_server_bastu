@@ -10,8 +10,11 @@ SERVICE_NAME=raspberry-bastu
 SERVICE_FILE=/etc/systemd/system/${SERVICE_NAME}.service
 ENV_FILE=/etc/${SERVICE_NAME}.env
 
-echo "==> Arbetskatalog: $(pwd)"
-WORKDIR="$(pwd)"
+SCRIPT_DIR="$(cd \"$(dirname \"$0\")\" && pwd)"
+REPO_ROOT="$(cd \"${SCRIPT_DIR}/..\" && pwd)"
+echo "==> Repo-rot: ${REPO_ROOT}"
+cd "${REPO_ROOT}"
+WORKDIR="${REPO_ROOT}"
 
 if ! command -v node >/dev/null 2>&1; then
   echo "==> Installerar Node.js 18 (kräver sudo)"
@@ -56,7 +59,7 @@ fi
 
 echo "==> Installerar systemd service till ${SERVICE_FILE}"
 TMP_SERVICE=$(mktemp)
-cp systemd/raspberry-bastu.service "$TMP_SERVICE"
+cp "${REPO_ROOT}/systemd/raspberry-bastu.service" "$TMP_SERVICE"
 sudo cp "$TMP_SERVICE" "${SERVICE_FILE}"
 sudo sed -i "s#^WorkingDirectory=.*#WorkingDirectory=${WORKDIR}#" "${SERVICE_FILE}"
 
