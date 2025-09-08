@@ -10,8 +10,8 @@ SERVICE_NAME=raspberry-bastu
 SERVICE_FILE=/etc/systemd/system/${SERVICE_NAME}.service
 ENV_FILE=/etc/${SERVICE_NAME}.env
 
-SCRIPT_DIR="$(cd \"$(dirname \"$0\")\" && pwd)"
-REPO_ROOT="$(cd \"${SCRIPT_DIR}/..\" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 echo "==> Repo-rot: ${REPO_ROOT}"
 cd "${REPO_ROOT}"
 WORKDIR="${REPO_ROOT}"
