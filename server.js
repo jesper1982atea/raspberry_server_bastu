@@ -33,6 +33,12 @@ const debugSensorList = (process.env.DEBUG_SENSORS || '28-TEST1,28-TEST2,cpu')
   .filter(Boolean);
 const simTemps = Object.create(null); // sensor -> tempC
 
+// Bokningsstatus
+let lastBookingsAt = null;
+let lastBookingsOk = null;
+let lastBookingsInfo = null;
+let lastBookingsStatusCode = null;
+
 function addLog(entry) {
   publishLog.push({ ...entry, time: new Date().toISOString() });
   if (publishLog.length > MAX_LOG) publishLog.splice(0, publishLog.length - MAX_LOG);
@@ -345,7 +351,7 @@ async function sendTemperatureData(sensorName, tempC) {
         });
 
         const responseData = await response.text();
-        addLog({ type: 'temp', sensor: sensorName, tempC, ok: response.ok, info: responseData.slice(0, 200) });
+        addLog({ type: 'temp', sensor: sensorName, tempC, ok: response.ok, statusCode: response.status, info: responseData.slice(0, 200) });
         console.log(`Data sent for ${sensorName}: ${responseData}`);
     } catch (error) {
         console.error(`Error sending data for ${sensorName}: ${error}`);
@@ -423,14 +429,28 @@ async function fetchBookings() {
 
         // Check if the response is okay
         if (!response.ok) {
+            lastBookingsAt = new Date().toISOString();
+            lastBookingsOk = false;
+            lastBookingsStatusCode = response.status;
+            const t = await response.text();
+            lastBookingsInfo = `HTTP ${response.status} ${t.slice(0, 200)}`;
+            addLog({ type: 'bookings', ok: false, statusCode: response.status, info: lastBookingsInfo });
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         // Get the response as text
         const data = await response.text();
+        lastBookingsAt = new Date().toISOString();
+        lastBookingsOk = true;
+        lastBookingsStatusCode = response.status;
+        lastBookingsInfo = data.slice(0, 200);
+        addLog({ type: 'bookings', ok: true, statusCode: response.status, info: lastBookingsInfo });
         return data;  // Return the data to the caller
     } catch (error) {
         console.error(`Error fetching bookings: ${error.message}`);
+        if (!lastBookingsAt) lastBookingsAt = new Date().toISOString();
+        if (lastBookingsOk === null) lastBookingsOk = false;
+        addLog({ type: 'bookings', ok: false, info: String(error).slice(0, 200) });
         throw error;  // Propagate the error so it can be handled by the caller
     }
 }
@@ -476,6 +496,12 @@ app.get('/api/runtime-status', (req, res) => {
     sensors: {
       discovered: lastSensors,
       cpuTempC: debugMode ? simulateTemp('cpu') : readCpuTempC(),
+    },
+    bookings: {
+      lastAt: lastBookingsAt,
+      ok: lastBookingsOk,
+      statusCode: lastBookingsStatusCode,
+      info: lastBookingsInfo,
     },
     flags: {
       PUBLISH_ENABLED,

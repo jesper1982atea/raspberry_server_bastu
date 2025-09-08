@@ -23,6 +23,22 @@ Installation (GitHub‑repo)
    chmod +x scripts/install.sh
    ./scripts/install.sh
 
+Uppdatera och starta om
+-----------------------
+- Från repo‑roten:
+  - scripts/update.sh
+- Gör manuellt:
+  - git pull --rebase  (om repo är kopplat)
+  - npm ci --omit=dev  (eller npm install --omit=dev)
+  - sudo systemctl restart raspberry-bastu
+  - sudo systemctl status raspberry-bastu
+  - journalctl -u raspberry-bastu -f
+
+Automatisk omstart vid fel/omboot
+---------------------------------
+- systemd‑uniten är konfigurerad med `Restart=always` och `WantedBy=multi-user.target`.
+- Tjänsten startar vid boot och försöker startas om vid krasch.
+
 4) Kontrollera status/loggar:
    sudo systemctl status raspberry-bastu
    journalctl -u raspberry-bastu -f
@@ -68,6 +84,7 @@ API‑endpoints
   - GET /api/publish-log: senaste publiceringar (limit=)
   - GET /api/debug: hämta debug‑läge och sensorer
   - POST /api/debug { enabled: boolean }: sätt debug‑läge
+  - GET /api/update-bookings: manuell uppdatering (visas i dashboard)
 
 Hur sändning fungerar
 ---------------------
