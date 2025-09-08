@@ -28,10 +28,30 @@ else
   npm install --omit=dev
 fi
 
-echo "==> Skapar/uppdaterar env-fil i ${ENV_FILE}"
+echo "==> Säkerställer lokal .env"
+if [ ! -f .env ]; then
+  if [ -f .env.example ]; then
+    cp .env.example .env
+    echo "PORT=${PORT:-5000}" >> .env
+    echo "NODE_ENV=production" >> .env
+    echo "==> Skapade .env från .env.example (lägg in API_KEY m.m.)"
+  else
+    echo "PORT=5000" > .env
+    echo "NODE_ENV=production" >> .env
+    echo "==> Skapade minimal .env (lägg in API_KEY m.m.)"
+  fi
+fi
+
+echo "==> Skapar/uppdaterar system-env i ${ENV_FILE}"
 if [ ! -f "${ENV_FILE}" ]; then
-  sudo cp .env.example "${ENV_FILE}"
+  if [ -f .env ]; then
+    sudo cp .env "${ENV_FILE}"
+  else
+    sudo cp .env.example "${ENV_FILE}" 2>/dev/null || echo "PORT=5000" | sudo tee "${ENV_FILE}" >/dev/null
+  fi
   echo "==> Redigera ${ENV_FILE} och sätt API_KEY m.m."
+else
+  echo "==> System-env finns redan: ${ENV_FILE} (hoppar över kopiering)"
 fi
 
 echo "==> Installerar systemd service till ${SERVICE_FILE}"
@@ -51,4 +71,3 @@ sudo systemctl restart ${SERVICE_NAME}
 echo "==> Klart! Kolla status med: sudo systemctl status ${SERVICE_NAME}"
 echo "==> Loggar: journalctl -u ${SERVICE_NAME} -f"
 echo "==> OBS: Aktivera 1-wire på Pi (raspi-config > Interface Options > 1-Wire) och starta om om nödvändigt."
-

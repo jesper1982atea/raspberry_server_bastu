@@ -16,8 +16,8 @@ Installation (GitHub‑repo)
    cd raspberry_server_bastu
 
 2) Konfigurera miljövariabler:
-   cp .env.example .env   # För lokal körning
-   # Eller använd systemd‑env på /etc/raspberry-bastu.env (se installscript)
+   Installationsscriptet skapar både lokal `.env` och `/etc/raspberry-bastu.env`.
+   Du kan redigera värden i efterhand, främst `API_KEY`.
 
 3) Installera och sätt upp som systemd‑tjänst:
    chmod +x scripts/install.sh
