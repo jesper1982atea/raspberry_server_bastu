@@ -58,6 +58,11 @@ else
 fi
 
 echo "==> Installerar systemd service till ${SERVICE_FILE}"
+if [ ! -f "${REPO_ROOT}/systemd/raspberry-bastu.service" ]; then
+  echo "!! Kunde inte hitta systemd/raspberry-bastu.service i ${REPO_ROOT}" >&2
+  echo "   Kontrollera att du kör scriptet i rätt repo och att filen finns." >&2
+  exit 1
+fi
 TMP_SERVICE=$(mktemp)
 cp "${REPO_ROOT}/systemd/raspberry-bastu.service" "$TMP_SERVICE"
 sudo cp "$TMP_SERVICE" "${SERVICE_FILE}"
