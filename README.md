@@ -61,7 +61,9 @@ Se `.env.example` för alla alternativ. Viktiga:
 - ENABLE_*: aktivera valfria rutter (batteri, voltage, huawei)
   - ENABLE_BM2_BATTERY_ROUTE: aktiverar endpoint som läser BM2‑spänning via Python (enstaka mätning)
   - PUBLISH_BATTERY_ENABLED: postar BM2‑batterispänning enligt samma schema som temperaturer
-  - PUBLISH_BATTERY_URL: endpoint för att posta batterispänning (om blankt används default `/SuanaTemp/Battery/Voltage` under API_BASE_URL)
+  - PUBLISH_BATTERY_URL: endpoint för att posta batterispänning (default: `API_BASE_URL + '/SuanaTemp/VoltageData'`)
+  - PUBLISH_BATTERY_AS_TEMP: om `true` postar som vanlig sensor till TempData med `name: 'battery'`
+  - BATTERY_ID, BATTERY_MHA, BATTERY_NAME: fält i payloaden (default: `0, 0, 'bm2'`)
 - DEBUG_MODE: starta i debug‑läge (simulerade sensorer)
 - DEBUG_SENSORS: kommaseparerad lista (t.ex. 28-TEST1,28-TEST2,cpu)
 
@@ -129,8 +131,11 @@ BM2-batteri (enkel mätning)
 Schemalagd publicering av batterispänning
 ----------------------------------------
 - Sätt `PUBLISH_BATTERY_ENABLED=true` i `.env`.
-- Valfritt: sätt `PUBLISH_BATTERY_URL` (annars används `API_BASE_URL + '/SuanaTemp/Battery/Voltage'`).
+- Valfritt: sätt `PUBLISH_BATTERY_URL` (default: `API_BASE_URL + '/SuanaTemp/VoltageData'`).
+- Payload som skickas:
+  `{ "id": <BATTERY_ID>, "voltage": <Volt>, "mha": <BATTERY_MHA>, "timestamp": <ISO>, "name": <BATTERY_NAME> }`
 - Värdet loggas i publish-loggen som `type: 'battery'`, `sensor: 'bm2'` (kolumnen visar siffran i °C‑kolumnen).
+- Alternativ fallback: sätt `PUBLISH_BATTERY_AS_TEMP=true` för att posta till TempData som sensor `battery`.
 
 Manuell testpost av batterispänning
 -----------------------------------

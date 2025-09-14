@@ -299,8 +299,25 @@ if (ENABLE_BM2_BATTERY_ROUTE) {
 // Helper to post BM2 battery voltage to external API
 async function sendBatteryVoltage(voltage) {
   const timestamp = new Date().toISOString();
-  const url = process.env.PUBLISH_BATTERY_URL || `${API_BASE_URL}/SuanaTemp/Battery/Voltage`;
-  const payload = { voltage: Number(voltage), timestamp, name: 'bm2' };
+  // Optional fallback: publish as temperature to TempData
+  if (envBool('PUBLISH_BATTERY_AS_TEMP', false)) {
+    try {
+      await sendTemperatureData('battery', Number(voltage));
+      return 'Published as temp to TempData (battery)';
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  // Default to provided API path and payload structure
+  const url = process.env.PUBLISH_BATTERY_URL || `${API_BASE_URL}/SuanaTemp/VoltageData`;
+  const payload = {
+    id: Number(process.env.BATTERY_ID || 0),
+    voltage: Number(voltage),
+    mha: Number(process.env.BATTERY_MHA || 0),
+    timestamp,
+    name: String(process.env.BATTERY_NAME || 'bm2'),
+  };
   try {
     const response = await fetch(url, {
       method: 'POST',
