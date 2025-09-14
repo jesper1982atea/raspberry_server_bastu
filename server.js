@@ -5,6 +5,7 @@ const path = require('path');
 const glob = require('glob');
 const { exec } = require('child_process');
 const axios = require('axios');
+const { run: readBm2VoltageOnce } = require('./scripts/read_battery_once.js');
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
@@ -112,6 +113,8 @@ function readCpuTempC() {
 const API_BASE_URL = process.env.API_BASE_URL || 'https://sjoangensbastuflotte.azurewebsites.net';
 const API_KEY = process.env.API_KEY || '';
 const ENABLE_BATTERY_ROUTES = envBool('ENABLE_BATTERY_ROUTES', false);
+const ENABLE_BM2_BATTERY_ROUTE = envBool('ENABLE_BM2_BATTERY_ROUTE', false);
+const PUBLISH_BATTERY_ENABLED = envBool('PUBLISH_BATTERY_ENABLED', false);
 
 if (ENABLE_BATTERY_ROUTES) {
   // Battery status
@@ -264,6 +267,44 @@ if (ENABLE_VOLTAGE_ROUTE) {
   });
 }
 
+// BM2 battery voltage (single-shot) using external Python script
+if (ENABLE_BM2_BATTERY_ROUTE) {
+  const { run: readBm2VoltageOnce } = require('./scripts/read_battery_once.js');
+
+  app.get('/api/battery_voltage_once', async (req, res) => {
+    const timeoutMs = Number(process.env.BM2_TIMEOUT_MS || 70_000);
+    try {
+      const v = await readBm2VoltageOnce(timeoutMs);
+      res.json({ voltage: Number(v.toFixed(2)), unit: 'V' });
+    } catch (err) {
+      console.error('BM2 battery read error:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+}
+
+// Helper to post BM2 battery voltage to external API
+async function sendBatteryVoltage(voltage) {
+  const timestamp = new Date().toISOString();
+  const url = process.env.PUBLISH_BATTERY_URL || `${API_BASE_URL}/SuanaTemp/Battery/Voltage`;
+  const payload = { voltage: Number(voltage), timestamp, name: 'bm2' };
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'accept': 'text/plain', 'ApiKey': API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const text = await response.text();
+    addLog({ type: 'battery', sensor: 'bm2', tempC: Number(voltage), ok: response.ok, statusCode: response.status, info: text.slice(0, 200) });
+    if (!response.ok) throw new Error(`HTTP ${response.status} ${text}`);
+    return text;
+  } catch (err) {
+    console.error(`Error sending battery voltage: ${err.message}`);
+    addLog({ type: 'battery', sensor: 'bm2', tempC: Number(voltage), ok: false, info: String(err).slice(0, 200) });
+    throw err;
+  }
+}
+
 
 
 const ENABLE_HUAWEI_ROUTES = envBool('ENABLE_HUAWEI_ROUTES', false);
@@ -411,6 +452,18 @@ async function scheduleTemperatureSending() {
     }
   }
 
+  // BM2 batterispänning enligt schema (separat publiceringsflagga)
+  if (PUBLISH_BATTERY_ENABLED) {
+    const timeoutMs = Number(process.env.BM2_TIMEOUT_MS || 70_000);
+    readBm2VoltageOnce(timeoutMs)
+      .then((v) => sendBatteryVoltage(v))
+      .catch((err) => {
+        console.error('BM2 battery read error (scheduled):', err.message);
+        addLog({ type: 'battery', sensor: 'bm2', tempC: null, ok: false, info: String(err).slice(0, 200) });
+      });
+    count++;
+  }
+
   lastPublishCount = count;
   if (UPDATE_BOOKINGS_ENABLED) {
     fetchBookings().catch((err) => console.error('Fel vid uppdatering av bokningar:', err.message));
@@ -505,6 +558,7 @@ app.get('/api/runtime-status', (req, res) => {
     },
     flags: {
       PUBLISH_ENABLED,
+      PUBLISH_BATTERY_ENABLED,
       UPDATE_BOOKINGS_ENABLED,
       ENABLE_BATTERY_ROUTES,
       ENABLE_VOLTAGE_ROUTE,

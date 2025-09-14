@@ -59,6 +59,9 @@ Se `.env.example` för alla alternativ. Viktiga:
 - UPDATE_BOOKINGS_ENABLED, UPDATE_BOOKINGS_URL: hämtning/uppdatering av bokningar
 - SCHEDULE_ACTIVE_START_HOUR, SCHEDULE_ACTIVE_END_HOUR, SCHEDULE_EVERY_MINUTES: schema
 - ENABLE_*: aktivera valfria rutter (batteri, voltage, huawei)
+  - ENABLE_BM2_BATTERY_ROUTE: aktiverar endpoint som läser BM2‑spänning via Python (enstaka mätning)
+  - PUBLISH_BATTERY_ENABLED: postar BM2‑batterispänning enligt samma schema som temperaturer
+  - PUBLISH_BATTERY_URL: endpoint för att posta batterispänning (om blankt används default `/SuanaTemp/Battery/Voltage` under API_BASE_URL)
 - DEBUG_MODE: starta i debug‑läge (simulerade sensorer)
 - DEBUG_SENSORS: kommaseparerad lista (t.ex. 28-TEST1,28-TEST2,cpu)
 
@@ -79,6 +82,7 @@ API‑endpoints
 - GET /api/IsItBooked: proxar bokningsstatus
 - GET /api/update-bookings: triggar uppdatering (server → externt API)
 - (Valfritt) /api/battery-status, /api/batterystatustoday, /api/voltage_status, /api/huawei-*
+- (Valfritt) /api/battery_voltage_once (BM2 via Python, returnerar { voltage, unit })
 - Frontend-backend:
   - GET /api/runtime-status: körstatus, schema, sensorer
   - GET /api/publish-log: senaste publiceringar (limit=)
@@ -93,6 +97,7 @@ Hur sändning fungerar
   - Var SCHEDULE_EVERY_MINUTES minut mellan SCHEDULE_ACTIVE_START_HOUR–SCHEDULE_ACTIVE_END_HOUR
   - Samt varje heltimme (minute === 0)
 - Publicering och bokningsuppdatering kan stängas av via env.
+  - Batterispänning: sätt `PUBLISH_BATTERY_ENABLED=true`. Servern läser BM2 en gång och postar till `PUBLISH_BATTERY_URL` per schema.
 
 Felsökning
 ----------
@@ -107,3 +112,21 @@ Säkerhet
 Licens
 ------
 - Privat/anpassad. Lägg till licens om du publicerar öppet.
+
+BM2-batteri (enkel mätning)
+---------------------------
+- Script: `scripts/read_battery_once.js` spawnar ett Python‑skript som skriver endast volt till stdout (t.ex. `12.54`).
+- Aktivera API‑route: sätt `ENABLE_BM2_BATTERY_ROUTE=true` i `.env` och starta om tjänsten.
+- Miljövariabler:
+  - `BM2_PYTHON`: sökväg till Python i venv (default: `/home/jesper/bm2-battery-monitor/.venv/bin/python`)
+  - `BM2_SCRIPT`: sökväg till `voltage_once.py` som skriver spänning (default: `/home/jesper/bm2-battery-monitor/bm2_python/voltage_once.py`)
+  - `BM2_TIMEOUT_MS`: timeout för körning (default: `70000`)
+- Testa lokalt:
+  - `node scripts/read_battery_once.js` → skriver t.ex. `12.54`
+  - `curl http://localhost:5000/api/battery_voltage_once` → `{ "voltage": 12.54, "unit": "V" }`
+
+Schemalagd publicering av batterispänning
+----------------------------------------
+- Sätt `PUBLISH_BATTERY_ENABLED=true` i `.env`.
+- Valfritt: sätt `PUBLISH_BATTERY_URL` (annars används `API_BASE_URL + '/SuanaTemp/Battery/Voltage'`).
+- Värdet loggas i publish-loggen som `type: 'battery'`, `sensor: 'bm2'` (kolumnen visar siffran i °C‑kolumnen).

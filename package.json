@@ -5,7 +5,8 @@
   "description": "Raspberry Pi server som läser temperatur och skickar data enligt schema.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "battery:once": "node scripts/read_battery_once.js"
   },
   "engines": {
     "node": ">=18"
@@ -17,4 +18,3 @@
     "glob": "^10.4.5"
   }
 }
-
