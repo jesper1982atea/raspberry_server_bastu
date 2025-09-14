@@ -281,6 +281,19 @@ if (ENABLE_BM2_BATTERY_ROUTE) {
       res.status(500).json({ error: err.message });
     }
   });
+
+  // Force a one-off publish of BM2 battery voltage
+  app.get('/api/battery_publish_once', async (req, res) => {
+    const timeoutMs = Number(process.env.BM2_TIMEOUT_MS || 70_000);
+    try {
+      const v = await readBm2VoltageOnce(timeoutMs);
+      const responseText = await sendBatteryVoltage(v);
+      res.json({ ok: true, voltage: Number(v.toFixed(2)), unit: 'V', response: String(responseText).slice(0, 500) });
+    } catch (err) {
+      console.error('BM2 battery publish error:', err.message);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
 }
 
 // Helper to post BM2 battery voltage to external API

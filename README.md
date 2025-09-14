@@ -83,6 +83,7 @@ API‑endpoints
 - GET /api/update-bookings: triggar uppdatering (server → externt API)
 - (Valfritt) /api/battery-status, /api/batterystatustoday, /api/voltage_status, /api/huawei-*
 - (Valfritt) /api/battery_voltage_once (BM2 via Python, returnerar { voltage, unit })
+- (Valfritt) /api/battery_publish_once (BM2 → postar direkt och returnerar svar)
 - Frontend-backend:
   - GET /api/runtime-status: körstatus, schema, sensorer
   - GET /api/publish-log: senaste publiceringar (limit=)
@@ -130,3 +131,9 @@ Schemalagd publicering av batterispänning
 - Sätt `PUBLISH_BATTERY_ENABLED=true` i `.env`.
 - Valfritt: sätt `PUBLISH_BATTERY_URL` (annars används `API_BASE_URL + '/SuanaTemp/Battery/Voltage'`).
 - Värdet loggas i publish-loggen som `type: 'battery'`, `sensor: 'bm2'` (kolumnen visar siffran i °C‑kolumnen).
+
+Manuell testpost av batterispänning
+-----------------------------------
+- Sätt `ENABLE_BM2_BATTERY_ROUTE=true` i `.env` och starta om tjänsten.
+- Kör: `curl http://localhost:5000/api/battery_publish_once`
+- Förväntat: `{ ok: true, voltage: 12.54, unit: "V", response: "...server response..." }`
